@@ -24,7 +24,6 @@ const {
 } = require('./core');
 const initializeMiddlewares = require('./middlewares');
 const initializeHooks = require('./hooks');
-const fs = require('fs');
 
 /**
  * Construct an Strapi instance.
@@ -350,8 +349,8 @@ class Strapi extends EventEmitter {
           });
 
     return Promise.all(
-      Object.values(this.plugins).map(x =>
-        execBootstrap(get(x, 'config.functions.bootstrap'))
+      Object.values(this.plugins).map(plugin =>
+        execBootstrap(get(plugin, 'config.functions.bootstrap'))
       )
     ).then(() => execBootstrap(this.config.functions.bootstrap));
   }
