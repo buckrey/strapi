@@ -18,20 +18,23 @@
     "eslint-plugin-react": "^7.7.0"
   },
   "dependencies": {
+    "knex": "latest",
     "lodash": "^4.17.5",
+    "sqlite3": "^4.0.6",
     "strapi": "3.0.0-alpha.25.2",
-    "strapi-utils": "3.0.0-alpha.25.2",
     "strapi-admin": "3.0.0-alpha.25.2",
     "strapi-hook-bookshelf": "3.0.0-alpha.25.2",
-    "strapi-plugin-settings-manager": "3.0.0-alpha.25.2",
-    "strapi-plugin-content-type-builder": "3.0.0-alpha.25.2",
-    "strapi-plugin-content-manager": "3.0.0-alpha.25.2",
-    "strapi-plugin-users-permissions": "3.0.0-alpha.25.2",
-    "strapi-plugin-email": "3.0.0-alpha.25.2",
-    "strapi-plugin-upload": "3.0.0-alpha.25.2",
     "strapi-hook-knex": "3.0.0-alpha.25.2",
-    "knex": "latest",
-    "sqlite3": "latest"
+    "strapi-middleware-views": "3.0.0-alpha.25.2",
+    "strapi-plugin-content-manager": "3.0.0-alpha.25.2",
+    "strapi-plugin-content-type-builder": "3.0.0-alpha.25.2",
+    "strapi-plugin-email": "3.0.0-alpha.25.2",
+    "strapi-plugin-settings-manager": "3.0.0-alpha.25.2",
+    "strapi-plugin-upload": "3.0.0-alpha.25.2",
+    "strapi-plugin-users-permissions": "3.0.0-alpha.25.2",
+    "strapi-provider-email-mailgun": "^3.0.0-alpha.15",
+    "strapi-provider-upload-aws-s3": "^3.0.0-alpha.15",
+    "strapi-utils": "3.0.0-alpha.25.2"
   },
   "author": {
     "name": "alex",

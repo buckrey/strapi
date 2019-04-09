@@ -1,96 +1,97 @@
 'use strict';
 
 // Dependencies.
-const fs = require('fs');
+// const fs = require('fs');
 const path = require('path');
-const glob = require('glob');
-// const { _.merge, setWith, get, _.upperFirst, isEmpty, isObject, pullAll, defaults, assign, clone, cloneDeep, _.camelCase } = require('lodash');
 const _ = require('lodash');
-const { templateConfiguration } = require('strapi-utils');
-const utils = require('../utils');
+const fs = require('fs-extra');
 
 const loadConfig = require('../load/config');
+const findPackagePath = require('../load/package-path');
+
+const PLUGIN_PREFIX = 'strapi-plugin';
 
 module.exports.nested = async function() {
-  this.config.info = require(path.resolve(this.config.appPath, 'package.json'));
+  const { appPath, installedPlugins } = this.config;
 
-  const conf = await loadConfig(path.resolve(this.config.appPath, 'config'));
-  _.merge(this.config, conf);
+  const [config, admin, api, plugins, localPlugins] = await Promise.all([
+    loadAppConfig(appPath),
+    loadAdminConfig(),
+    loadApisConfig(appPath),
+    loadPluginsConfig(installedPlugins),
+    loadLocalPluginsConfig(appPath),
+  ]);
 
-  console.log(this.config);
-
-  const adminConf = await loadConfig(
-    path.resolve(path.dirname(require.resolve('strapi-admin/package.json')), 'config')
-  );
-
-  console.log(adminConf)
-  // _.merge(this.config, conf);
-
-  // return Promise.all([
-  //   // Load root configurations.
-  //   new Promise((resolve, reject) => {
-  //     glob('./config/**/*.*(js|json)', {
-  //       cwd: this.config.appPath,
-  //       dot: true
-  //     }, (err, files) => {
-  //       if (err) {
-  //         return reject(err);
-  //       }
-
-  //       utils.loadConfig.call(this, files).then(resolve).catch(reject);
-  //     });
-  //   }),
-  //   // Load APIs configurations.
-  //   new Promise((resolve, reject) => {
-  //     glob('./api/*/config/**/*.*(js|json)', {
-  //       cwd: this.config.appPath
-  //     }, (err, files) => {
-  //       if (err) {
-  //         return reject(err);
-  //       }
-
-  //       utils.loadConfig.call(this, files).then(resolve).catch(reject);
-  //     });
-  //   }),
-  //   // Load plugins configurations.
-  //   new Promise((resolve, reject) => {
-  //     glob('./plugins/*/config/**/*.*(js|json)', {
-  //       cwd: this.config.appPath
-  //     }, (err, files) => {
-  //       if (err) {
-  //         return reject(err);
-  //       }
-
-  //       utils.loadConfig.call(this, files).then(resolve).catch(reject);
-  //     });
-  //   }),
-  //   // Load admin configurations.
-  //   new Promise((resolve, reject) => {
-  //     glob('./admin/config/**/*.*(js|json)', {
-  //       cwd: this.config.appPath
-  //     }, (err, files) => {
-  //       if (err) {
-  //         return reject(err);
-  //       }
-
-  //       utils.loadConfig.call(this, files).then(resolve).catch(reject);
-  //     });
-  //   }),
-  //   // Load plugins configurations.
-  //   new Promise(resolve => {
-  //     setWith(
-  //       this,
-  //       'config.info',
-  //       require(path.resolve(process.cwd(), 'package.json')),
-  //       Object
-  //     );
-
-  //     resolve();
-  //   })
-  // ]);
+  _.merge(this, {
+    config,
+    admin,
+    api,
+    plugins: _.merge(plugins, localPlugins),
+  });
 };
 
-module.exports.app = async function() {
+// Loads an app config folder
+const loadAppConfig = appPath => loadConfig(path.resolve(appPath, 'config'));
+
+// Loads the strapi-admin config folder
+const loadAdminConfig = async () => ({
+  config: await loadConfig(
+    path.resolve(findPackagePath('strapi-admin'), 'config')
+  ),
+});
+
+// Loads every apis config folder
+const loadApisConfig = async appPath => {
+  let apis = {};
+  const apiFolder = path.resolve(appPath, 'api');
+  const apiFolders = await fs.readdir(apiFolder);
+
+  for (let apiFolder of apiFolders) {
+    const apiConfig = await loadConfig(
+      path.resolve(apiFolder, apiFolder, 'config')
+    );
+
+    _.set(apis, [apiFolder, 'config'], apiConfig);
+  }
+
+  return apis;
+};
+
+const loadLocalPluginsConfig = async appPath => {
+  let localPlugins = {};
+  const pluginsFolder = path.resolve(appPath, 'plugins');
+  const pluginsFolders = await fs.readdir(pluginsFolder);
+
+  for (let pluginsFolder of pluginsFolders) {
+    const pluginsConfig = await loadConfig(
+      path.resolve(pluginsFolder, pluginsFolder, 'config')
+    );
+
+    _.set(localPlugins, [pluginsFolder, 'config'], pluginsConfig);
+  }
+
+  return localPlugins;
+};
+
+// Loads installed plugins config
+const loadPluginsConfig = async pluginsNames => {
+  let plugins = {};
+  for (let plugin of pluginsNames) {
+    const pluginConfig = await loadConfig(
+      path.resolve(findPackagePath(plugin), 'config')
+    );
+
+    _.set(
+      plugins,
+      [plugin.substring(PLUGIN_PREFIX.length + 1), 'config'],
+      pluginConfig
+    );
+  }
+
+  return plugins;
+};
+
+module.exports.app = function() {
   // Retrieve Strapi version.
   this.config.uuid = _.get(this.config.info, 'strapi.uuid', '');
   this.config.info.customs = _.get(this.config.info, 'strapi', {});
@@ -120,7 +121,7 @@ module.exports.app = async function() {
   }
 
   // Template literal string.
-  this.config = templateConfiguration(this.config);
+  // this.config = templateConfiguration(this.config);
 
   // Initialize main router to use it in middlewares.
   this.router = this.koaMiddlewares.routerJoi();
@@ -171,7 +172,7 @@ module.exports.app = async function() {
 
   // Set routes.
   this.config.routes = Object.keys(this.api || []).reduce((acc, key) => {
-    return acc.concat(get(this.api[key], 'config.routes') || {});
+    return acc.concat(_.get(this.api[key], 'config.routes') || {});
   }, []);
 
   // Set admin controllers.
@@ -374,6 +375,7 @@ module.exports.app = async function() {
         _.get(this.config.currentEnvironment, ['hook', current]) ||
         _.get(this.config, ['hook', current])
     );
+
     acc[current] = !_.isObject(currentSettings) ? {} : currentSettings;
 
     if (!acc[current].hasOwnProperty('enabled')) {

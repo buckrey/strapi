@@ -44,25 +44,6 @@ module.exports = {
     return setWith(ctx, objPath, obj, Object);
   },
 
-  setConfigAdmin: function(ctx, path, type, loader) {
-    const objPath = 'admin.' + (type === 'optional'
-      ? this.optionalPath(path)
-      : this.aggregatePath(path));
-
-    // Direct assignation.
-    if (objPath.split('.').length === 1) {
-      return setWith(
-        ctx,
-        objPath,
-        merge(get(ctx, objPath), loader(path)),
-        Object
-      );
-    }
-
-    // Nested assignation.
-    return setWith(ctx, objPath, loader(path), Object);
-  },
-
   optionalPath: path => {
     return path
       .replace(/(\.settings|.json|.js)/g, '')

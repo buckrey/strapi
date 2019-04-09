@@ -1,16 +1,42 @@
 const path = require('path');
+const slash = require('slash');
 const _ = require('lodash');
 
 const requireFile = require('./require-file');
 const glob = require('./glob');
 
 const setValue = (obj, rootPath, source) => {
-  const propPath = rootPath.split('/').slice(1);
+  if (rootPath === null) {
+    return _.assign(obj, source);
+  }
+
+  const propPath = slash(rootPath.toLowerCase()).split('/');
   if (propPath.length === 0) {
     return _.assign(obj, source);
   }
+
   _.setWith(obj, propPath, source, Object);
 };
+
+const prefixedPath = [
+  ...['staging', 'production', 'development'].reduce((acc, env) => {
+    return acc.concat(
+      `environments/${env}/database`,
+      `environments/${env}/security`,
+      `environments/${env}/request`,
+      `environments/${env}/response`,
+      `environments/${env}/server`
+    );
+  }, []),
+  'functions',
+  'policies',
+  'locales',
+  'hook',
+  'middleware',
+  'language',
+  'queries',
+  'layout',
+];
 
 /**
  * Loads app config from a dir
@@ -27,16 +53,16 @@ module.exports = async dir => {
   files.forEach(file => {
     const m = requireFile(path.resolve(dir, file));
 
-    if (file === 'application.json' || path.basename(file) === 'custom.json') {
-      const rootPath = path.dirname(file);
-      setValue(root, rootPath, m);
-    } else {
+    if (_.some(prefixedPath, e => slash(file).startsWith(e))) {
       const rootPath = path.join(
         path.dirname(file),
         path.basename(file, path.extname(file))
       );
 
       setValue(root, rootPath, m);
+    } else {
+      const rootPath = path.dirname(file);
+      setValue(root, rootPath === '.' ? null : rootPath, m);
     }
   });
 

@@ -227,6 +227,23 @@ class Strapi extends EventEmitter {
       }
     });
 
+    this.config.info = require(path.resolve(
+      this.config.appPath,
+      'package.json'
+    ));
+
+    this.config.installedPlugins = Object.keys(
+      this.config.info.dependencies
+    ).filter(d => d.startsWith('strapi-plugin'));
+
+    this.config.installedMiddlewares = Object.keys(
+      this.config.info.dependencies
+    ).filter(d => d.startsWith('strapi-middleware'));
+
+    this.config.installedHooks = Object.keys(
+      this.config.info.dependencies
+    ).filter(d => d.startsWith('strapi-hook'));
+
     // Create AST.
     await Promise.all([
       nestedConfigurations.call(this),
